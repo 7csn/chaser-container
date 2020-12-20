@@ -1,5 +1,5 @@
 {
-  "name": "7csn/chaser-container",
+  "name": "7csn/container",
   "description": "IoC 容器",
   "type": "library",
   "require": {
