@@ -4,47 +4,55 @@ declare(strict_types=1);
 
 namespace chaser\container\definition;
 
-use chaser\container\collector\ReflectionCollector;
-use chaser\container\ContainerInterface;
-use chaser\container\exception\ReflectedException;
-use chaser\container\exception\ResolvedException;
-use chaser\container\resolver\FunctionResolver;
+use chaser\collector\ReflectedException;
+use chaser\collector\ReflectionCollector;
+use chaser\container\exception\DefinedException;
+use chaser\container\Resolver;
+use Closure;
 use ReflectionFunction;
-use TypeError;
 
 /**
- * 方法名定义
+ * 函数名/闭包定义
  *
  * @package chaser\container\definition
- *
- * @property ?ReflectionFunction $reflector
  */
-class FunctionDefinition extends Definition
+class FunctionDefinition implements DefinitionInterface
 {
+    /**
+     * 主反射
+     *
+     * @var ReflectionFunction
+     */
+    private ReflectionFunction $reflection;
+
     /**
      * 定义基础分析
      *
-     * @param string $functionName
+     * @param Closure|string $function
+     * @throws DefinedException
      */
-    public function __construct(string $functionName)
+    public function __construct(Closure|string $function)
     {
-        $this->name = $functionName;
         try {
-            $this->reflector = ReflectionCollector::function($functionName);
-            $this->isResolvable = true;
+            $this->reflection = ReflectionCollector::getFunction($function);
         } catch (ReflectedException $e) {
+            throw new DefinedException($e->getMessage(), $e->getCode());
         }
     }
 
     /**
      * @inheritDoc
      */
-    public function resolver(ContainerInterface $container): FunctionResolver
+    public function isResolvable(): bool
     {
-        try {
-            return new FunctionResolver($container, $this->reflector);
-        } catch (TypeError $e) {
-            throw new ResolvedException("Function[{$this->name}] does not exists");
-        }
+        return true;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function resolve(Resolver $resolver, array $arguments = []): mixed
+    {
+        return $resolver->functionAction($this->reflection, $arguments);
     }
 }

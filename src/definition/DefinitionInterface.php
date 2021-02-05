@@ -4,24 +4,16 @@ declare(strict_types=1);
 
 namespace chaser\container\definition;
 
-use chaser\container\ContainerInterface;
-use chaser\container\exception\ResolvedException;
-use chaser\container\resolver\ResolverInterface;
+use chaser\container\exception\{NotFoundException, ResolvedException};
+use chaser\container\Resolver;
 
 /**
- * 定义接口
+ * 定义
  *
  * @package chaser\container\definition
  */
 interface DefinitionInterface
 {
-    /**
-     * 获取定义名
-     *
-     * @return string|null
-     */
-    public function name(): ?string;
-
     /**
      * 是否可解析
      *
@@ -30,11 +22,13 @@ interface DefinitionInterface
     public function isResolvable(): bool;
 
     /**
-     * 获取定义解析器
+     * 定义解析
      *
-     * @param ContainerInterface $container
-     * @return ResolverInterface
+     * @param Resolver $resolver
+     * @param array $arguments
+     * @return mixed
+     * @throws NotFoundException
      * @throws ResolvedException
      */
-    public function resolver(ContainerInterface $container): ResolverInterface;
+    public function resolve(Resolver $resolver, array $arguments = []): mixed;
 }

@@ -4,15 +4,10 @@ declare(strict_types=1);
 
 namespace chaser\container;
 
-use chaser\container\collector\DefinitionCollector;
-use chaser\container\definition\DefinitionInterface;
-use chaser\container\dispatcher\ResolverDispatcher;
-use chaser\container\exception\{
-    ContainerException,
-    NotFoundException,
-    ResolvedException,
-};
+use chaser\container\definition\{ClassDefinition, FunctionDefinition, MethodDefinition};
+use chaser\container\exception\NotFoundException;
 use Psr\Container\ContainerInterface as PsrContainerInterface;
+use TypeError;
 
 /**
  * IoC 容器
@@ -24,9 +19,9 @@ class Container implements ContainerInterface
     /**
      * 定义解析调度器
      *
-     * @var ResolverDispatcher
+     * @var Resolver
      */
-    protected ResolverDispatcher $dispatcher;
+    protected Resolver $resolver;
 
     /**
      * 共享实体库
@@ -43,16 +38,16 @@ class Container implements ContainerInterface
     protected array $definitions = [];
 
     /**
-     * 创建实体标识符堆栈
+     * 解析实体标识符堆栈
      *
      * @var array
      */
-    protected array $makeStack = [];
+    protected array $resolveStack = [];
 
     /**
      * @inheritDoc
      */
-    public function define(string $id, $source)
+    public function define(string $id, callable|string $source): void
     {
         $this->definitions[$id] = DefinitionCollector::make($source);
         unset($this->entries[$id]);
@@ -61,21 +56,63 @@ class Container implements ContainerInterface
     /**
      * @inheritDoc
      */
-    public function make(string $id, array $parameters = [])
+    public function removeDefinition(string $id = null): void
+    {
+        if ($id === null) {
+            $this->definitions = [];
+        } else {
+            unset($this->definitions[$id]);
+        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function set(string $id, mixed $entry): void
+    {
+        $this->entries[$id] = $entry;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function unset(string $id = null): void
+    {
+        if ($id === null) {
+            $this->entries = [];
+        } else {
+            unset($this->entries[$id]);
+        }
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function make(string $id, array $parameters = []): mixed
+    {
+        if (empty($parameters) && (isset($this->entries[$id]) || key_exists($id, $this->entries))) {
+            return $this->entries[$id];
+        }
+
+        return $this->resolve($id, $parameters);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function resolve(string $id, array $parameters = []): mixed
     {
         $definition = $this->getDefinition($id);
 
-        $this->makeStack[] = $id;
+        $this->resolveStack[] = $id;
 
-        try {
-            $entry = $this->dispatcher->resolve($definition, $parameters);
-        } catch (ResolvedException $e) {
-            throw $definition->isResolvable()
-                ? NotFoundException::create($e, $this->makeStack)
-                : ContainerException::create($e, $this->makeStack);
+        if ($definition === false) {
+            throw new NotFoundException(join(',', $this->resolveStack));
         }
 
-        array_pop($this->makeStack);
+        $entry = $definition->resolve($this->resolver, $parameters);
+
+        array_pop($this->resolveStack);
 
         return $entry;
     }
@@ -83,68 +120,19 @@ class Container implements ContainerInterface
     /**
      * @inheritDoc
      */
-    public function set(string $id, $entry)
+    public function getResolveStack(): array
     {
-        $this->entries[$id] = $entry;
-    }
-
-    /**
-     * 共享容器自身，初始化定义
-     *
-     * @param array $sources
-     */
-    public function __construct(array $sources = [])
-    {
-        $this->dispatcher = new ResolverDispatcher($this);
-
-        $this->entries = [
-            PsrContainerInterface::class => $this,
-            ContainerInterface::class => $this,
-            self::class => $this,
-            ResolverDispatcher::class => $this->dispatcher,
-        ];
-
-        $this->initDefinitions($sources);
-    }
-
-    /**
-     * 初始化定义库
-     *
-     * @param array $sources
-     */
-    public function initDefinitions(array $sources = [])
-    {
-        $this->definitions = [];
-
-        foreach ($sources as $id => $source) {
-            $definition = DefinitionCollector::makeSafely($source);
-
-            if ($definition) {
-                $this->definitions[$id] = $definition;
-                unset($this->entries[$id]);
-            }
-        }
-    }
-
-    /**
-     * 获取标识符的定义
-     *
-     * @param string $id
-     * @return DefinitionInterface
-     */
-    protected function getDefinition(string $id)
-    {
-        return $this->definitions[$id] ??= DefinitionCollector::get($id);
+        return $this->resolveStack;
     }
 
     /**
      * @inheritDoc
      */
-    public function get(string $id)
+    public function get(string $id): mixed
     {
         return isset($this->entries[$id]) || key_exists($id, $this->entries)
             ? $this->entries[$id]
-            : $this->entries[$id] = $this->make($id);
+            : $this->entries[$id] = $this->resolve($id);
     }
 
     /**
@@ -155,6 +143,55 @@ class Container implements ContainerInterface
         return isset($this->entries[$id])
             || key_exists($id, $this->entries)
             || isset($this->definitions[$id])
-            || $this->getDefinition($id)->isResolvable();
+            || $this->getDefinition($id);
+    }
+
+    /**
+     * 共享容器自身，初始化定义
+     *
+     * @param array $sources
+     */
+    public function __construct(array $sources = [])
+    {
+        $this->resolver = new Resolver($this);
+
+        $this->entries = [
+            PsrContainerInterface::class => $this,
+            ContainerInterface::class => $this,
+            self::class => $this,
+            Resolver::class => $this->resolver,
+        ];
+
+        $this->defineBatchSafe($sources);
+    }
+
+    /**
+     * 初始化定义库
+     *
+     * @param array $sources
+     */
+    private function defineBatchSafe(array $sources = []): void
+    {
+        foreach ($sources as $id => $source) {
+            try {
+                $definition = DefinitionCollector::makeSafely($source);
+                if ($definition !== false) {
+                    $this->definitions[$id] = $definition;
+                    unset($this->entries[$id]);
+                }
+            } catch (TypeError) {
+            }
+        }
+    }
+
+    /**
+     * 获取标识符的定义
+     *
+     * @param string $id
+     * @return ClassDefinition|FunctionDefinition|MethodDefinition|false
+     */
+    private function getDefinition(string $id): ClassDefinition|FunctionDefinition|MethodDefinition|false
+    {
+        return $this->definitions[$id] ??= DefinitionCollector::makeSafely($id);
     }
 }

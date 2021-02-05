@@ -4,56 +4,81 @@ declare(strict_types=1);
 
 namespace chaser\container\definition;
 
-use chaser\container\collector\ReflectionCollector;
-use chaser\container\ContainerInterface;
-use chaser\container\exception\ReflectedException;
-use chaser\container\exception\ResolvedException;
-use chaser\container\resolver\MethodResolver;
-use ReflectionClass;
+use chaser\collector\ReflectedException;
+use chaser\collector\ReflectionCollector;
+use chaser\container\DefinitionCollector;
+use chaser\container\exception\DefinedException;
+use chaser\container\Resolver;
 use ReflectionMethod;
-use TypeError;
 
 /**
- * 类函数名定义
+ * 类方法名定义
  *
  * @package chaser\container\definition
- *
- * @property ?ReflectionMethod $reflector
  */
-class MethodDefinition extends Definition
+class MethodDefinition implements DefinitionInterface
 {
     /**
-     * 类反射
+     * 主反射
      *
-     * @var ReflectionClass|null
+     * @var ReflectionMethod
      */
-    protected ?ReflectionClass $class;
+    private ReflectionMethod $reflection;
+
+    /**
+     * 类名定义
+     *
+     * @var ClassDefinition
+     */
+    private ClassDefinition $classDefinition;
+
+    /**
+     * 是否静态
+     *
+     * @var bool
+     */
+    private bool $isStatic;
+
+    /**
+     * 是否可解析
+     *
+     * @var bool
+     */
+    private bool $isResolvable;
 
     /**
      * 定义基础分析
      *
-     * @param string $classname
-     * @param string $methodName
+     * @param string $class
+     * @param string $method
+     * @throws DefinedException
      */
-    public function __construct(string $classname, string $methodName)
+    public function __construct(string $class, string $method)
     {
-        $this->name = $classname . '::' . $methodName;
         try {
-            $this->reflector = ReflectionCollector::method($classname, $methodName);
-            $this->isResolvable = true;
+            $this->reflection = ReflectionCollector::getMethod($class, $method);
+            $this->classDefinition = DefinitionCollector::getClass($class);
+            $this->isStatic = $this->reflection->isStatic();
         } catch (ReflectedException $e) {
+            throw new DefinedException($e->getMessage(), $e->getCode());
         }
     }
 
     /**
      * @inheritDoc
      */
-    public function resolver(ContainerInterface $container): MethodResolver
+    public function isResolvable(): bool
     {
-        try {
-            return new MethodResolver($container, $this->reflector);
-        } catch (TypeError $e) {
-            throw new ResolvedException("Method[{$this->reflector->getDeclaringClass()->name}::{$this->name}] doesn't exists");
-        }
+        return $this->isResolvable ??= $this->reflection->isPublic()
+            && $this->reflection->isAbstract() === false
+            && ($this->isStatic || $this->classDefinition->isResolvable());
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function resolve(Resolver $resolver, array $arguments = []): mixed
+    {
+        return $resolver->methodAction($this->reflection, $arguments);
     }
 }

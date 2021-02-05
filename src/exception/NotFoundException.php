@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace chaser\container\exception;
 
+use Exception;
 use Psr\Container\NotFoundExceptionInterface;
 
 /**
@@ -11,7 +12,6 @@ use Psr\Container\NotFoundExceptionInterface;
  *
  * @package chaser\container\exception
  */
-class NotFoundException extends ContainerException implements NotFoundExceptionInterface
+class NotFoundException extends Exception implements NotFoundExceptionInterface
 {
-
 }

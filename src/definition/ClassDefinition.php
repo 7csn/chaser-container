@@ -4,47 +4,74 @@ declare(strict_types=1);
 
 namespace chaser\container\definition;
 
-use chaser\container\collector\ReflectionCollector;
-use chaser\container\ContainerInterface;
-use chaser\container\exception\ReflectedException;
-use chaser\container\exception\ResolvedException;
-use chaser\container\resolver\ClassResolver;
+use chaser\collector\ReflectedException;
+use chaser\collector\ReflectionCollector;
+use chaser\container\exception\DefinedException;
+use chaser\container\Resolver;
 use ReflectionClass;
-use TypeError;
 
 /**
  * 类名定义
  *
  * @package chaser\container\definition
- *
- * @property ?ReflectionClass $reflector
  */
-class ClassDefinition extends Definition
+class ClassDefinition implements DefinitionInterface
 {
+    /**
+     * 主反射
+     *
+     * @var ReflectionClass
+     */
+    private ReflectionClass $reflection;
+
+    /**
+     * 是否可解析
+     *
+     * @var bool
+     */
+    private bool $isResolvable;
+
     /**
      * 定义基础分析
      *
-     * @param string $classname
+     * @param string $class
+     * @throws DefinedException
      */
-    public function __construct(string $classname)
+    public function __construct(string $class)
     {
-        $this->name = $classname;
         try {
-            $this->reflector = ReflectionCollector::class($classname);
-            $this->isResolvable = true;
+            $this->reflection = ReflectionCollector::getClass($class);
         } catch (ReflectedException $e) {
+            throw new DefinedException($e->getMessage(), $e->getCode());
         }
+    }
+
+    /**
+     * 获取方法定义
+     *
+     * @param string $method
+     * @return MethodDefinition
+     * @throws DefinedException
+     */
+    public function getMethod(string $method): MethodDefinition
+    {
+        return new MethodDefinition($this->reflection->name, $method);
     }
 
     /**
      * @inheritDoc
      */
-    public function resolver(ContainerInterface $container): ClassResolver
+    public function isResolvable(): bool
     {
-        try {
-            return new ClassResolver($container, $this->reflector);
-        } catch (TypeError $e) {
-            throw new ResolvedException("Class[{$this->name}] does not exists");
-        }
+        return $this->isResolvable ??= $this->reflection->isInstantiable();
+    }
+
+    /**
+     * @return object
+     * @inheritDoc
+     */
+    public function resolve(Resolver $resolver, array $arguments = []): object
+    {
+        return $resolver->classAction($this->reflection, $arguments);
     }
 }
