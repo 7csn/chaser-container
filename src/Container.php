@@ -21,28 +21,28 @@ class Container implements ContainerInterface
      *
      * @var Resolver
      */
-    protected Resolver $resolver;
+    private Resolver $resolver;
 
     /**
      * 共享实体库
      *
      * @var array
      */
-    protected array $entries = [];
+    private array $entries = [];
 
     /**
      * 定义库
      *
      * @var array
      */
-    protected array $definitions = [];
+    private array $definitions = [];
 
     /**
      * 解析实体标识符堆栈
      *
      * @var array
      */
-    protected array $resolveStack = [];
+    private array $resolveStack = [];
 
     /**
      * @inheritDoc
