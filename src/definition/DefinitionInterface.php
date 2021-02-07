@@ -15,13 +15,6 @@ use chaser\container\Resolver;
 interface DefinitionInterface
 {
     /**
-     * 是否可解析
-     *
-     * @return bool
-     */
-    public function isResolvable(): bool;
-
-    /**
      * 定义解析
      *
      * @param Resolver $resolver

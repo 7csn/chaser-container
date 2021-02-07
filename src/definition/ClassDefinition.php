@@ -25,13 +25,6 @@ class ClassDefinition implements DefinitionInterface
     private ReflectionClass $reflection;
 
     /**
-     * 是否可解析
-     *
-     * @var bool
-     */
-    private bool $isResolvable;
-
-    /**
      * 定义基础分析
      *
      * @param string $class
@@ -44,26 +37,6 @@ class ClassDefinition implements DefinitionInterface
         } catch (ReflectedException $e) {
             throw new DefinedException($e->getMessage(), $e->getCode());
         }
-    }
-
-    /**
-     * 获取方法定义
-     *
-     * @param string $method
-     * @return MethodDefinition
-     * @throws DefinedException
-     */
-    public function getMethod(string $method): MethodDefinition
-    {
-        return new MethodDefinition($this->reflection->name, $method);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function isResolvable(): bool
-    {
-        return $this->isResolvable ??= $this->reflection->isInstantiable();
     }
 
     /**

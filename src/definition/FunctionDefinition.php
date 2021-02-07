@@ -43,14 +43,6 @@ class FunctionDefinition implements DefinitionInterface
     /**
      * @inheritDoc
      */
-    public function isResolvable(): bool
-    {
-        return true;
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function resolve(Resolver $resolver, array $arguments = []): mixed
     {
         return $resolver->functionAction($this->reflection, $arguments);

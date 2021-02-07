@@ -114,7 +114,7 @@ class DefinitionCollector
      */
     public static function getMethod(string $class, string $method): MethodDefinition
     {
-        return self::$methodDefinitions[$class][$method] ??= self::getClass($class)->getMethod($method);
+        return self::$methodDefinitions[$class][$method] ??= new MethodDefinition($class, $method);
     }
 
     /**
