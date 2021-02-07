@@ -49,7 +49,7 @@ class DefinitionCollector
             return self::get($source);
         }
 
-        if (is_object($source)) {
+        if ($source instanceof Closure) {
             return self::getFunction($source);
         }
 
@@ -86,11 +86,10 @@ class DefinitionCollector
      */
     public static function get(string $source): ClassDefinition|FunctionDefinition|MethodDefinition
     {
-        return is_callable($source)
-            ? str_contains($source, '::')
-                ? self::getMethod(...explode('::', $source, 2))
-                : self::getFunction($source)
-            : self::getClass($source);
+        if (str_contains($source, '::')) {
+            return self::getMethod(...explode('::', $source, 2));
+        }
+        return function_exists($source) ? self::getFunction($source) : self::getClass($source);
     }
 
     /**

@@ -53,11 +53,11 @@ interface ContainerInterface extends PsrContainerInterface
     public function resolve(string $id, array $parameters = []): mixed;
 
     /**
-     * 获取解析堆栈
+     * 获取解析定义串
      *
-     * @return string[]
+     * @return string
      */
-    public function getResolveStack(): array;
+    public function getResolving(): string;
 
     /**
      * 设置标识符实体

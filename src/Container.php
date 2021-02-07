@@ -107,7 +107,7 @@ class Container implements ContainerInterface
         $this->resolveStack[] = $id;
 
         if ($definition === false) {
-            throw new NotFoundException(join(',', $this->resolveStack));
+            throw new NotFoundException($this->getResolving());
         }
 
         $entry = $definition->resolve($this->resolver, $parameters);
@@ -120,9 +120,9 @@ class Container implements ContainerInterface
     /**
      * @inheritDoc
      */
-    public function getResolveStack(): array
+    public function getResolving(): string
     {
-        return $this->resolveStack;
+        return join(' > ', $this->resolveStack);
     }
 
     /**

@@ -244,16 +244,6 @@ class Resolver
      */
     private function exception(string $message): ResolvedException
     {
-        return new ResolvedException(sprintf('Resolving exception: %s%s%s', $this->resolving(), PHP_EOL, $message));
-    }
-
-    /**
-     * 解析进程串
-     *
-     * @return string
-     */
-    private function resolving(): string
-    {
-        return join(',', $this->container->getResolveStack());
+        return new ResolvedException(sprintf('Resolving exception: %s%s%s', $this->container->getResolving(), PHP_EOL, $message));
     }
 }
