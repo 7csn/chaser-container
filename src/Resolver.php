@@ -32,20 +32,12 @@ class Resolver
     private static array $functionParameters = [];
 
     /**
-     * 容器
-     *
-     * @var ContainerInterface
-     */
-    private ContainerInterface $container;
-
-    /**
      * 初始化解析调度器
      *
      * @param ContainerInterface $container
      */
-    public function __construct(ContainerInterface $container)
+    public function __construct(private ContainerInterface $container)
     {
-        $this->container = $container;
     }
 
     /**
