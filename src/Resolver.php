@@ -156,7 +156,7 @@ class Resolver
     /**
      * 参数列表依赖
      *
-     * @param array $parameters
+     * @param Parameter[] $parameters
      * @param array $arguments
      * @return array
      * @throws NotFoundException
@@ -164,7 +164,20 @@ class Resolver
      */
     private function dependencies(array $parameters, array $arguments): array
     {
-        return array_map(fn(Parameter $parameter) => $this->dependency($parameter, $arguments), $parameters);
+        $dependencies = [];
+
+        foreach ($parameters as $parameter) {
+            $dependencies[] = $this->dependency($parameter, $arguments);
+        }
+
+        if (isset($parameter) && $parameter->isVariadic()) {
+            $position = $parameter->position();
+            while (key_exists(++$position, $arguments)) {
+                $dependencies[] = $arguments[$position];
+            }
+        }
+
+        return $dependencies;
     }
 
     /**

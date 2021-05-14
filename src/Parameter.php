@@ -13,7 +13,6 @@ use ReflectionUnionType;
 /**
  * 参数分析
  *
- * Class ParameterType
  * @package chaser\container
  */
 class Parameter
@@ -38,6 +37,13 @@ class Parameter
      * @var bool
      */
     private bool $allowsNull;
+
+    /**
+     * 参数值是否可选
+     *
+     * @var bool
+     */
+    private bool $isVariadic;
 
     /**
      * 全限定类型名列表
@@ -71,6 +77,7 @@ class Parameter
         $this->name = $parameter->name;
         $this->position = $parameter->getPosition();
         $this->allowsNull = $parameter->allowsNull();
+        $this->isVariadic = $parameter->isVariadic();
         $this->classes = self::getAllClassname($parameter);
 
         $this->callName = $callName ?? self::getCallName($parameter);
@@ -173,6 +180,16 @@ class Parameter
     public function allowNull(): bool
     {
         return $this->allowsNull;
+    }
+
+    /**
+     * 返回参数是否可变
+     *
+     * @return bool
+     */
+    public function isVariadic(): bool
+    {
+        return $this->isVariadic;
     }
 
     /**
